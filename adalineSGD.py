@@ -23,7 +23,7 @@ class Adaline(object):
     
     def __init__(self, x, y):
         #  Having it on random does change the learning process
-        self.eta = 0.01 
+        self.eta = 0.0001 
         #self.weights = np.zeros(units) Boundary wont change bcz the weights are all 0
         self.bias = np.float64(0.)
         self.losses_avg = []
@@ -61,10 +61,9 @@ class Adaline(object):
         return self
     
     def partial_fit(self, X, y, epochs, reshuffle):
+        eta = 0.01
         for i in range(epochs):
             losses = []
-            
-            eta = 0.01
             
             if reshuffle:
                 concat_data = pd.concat(X, y)
@@ -78,15 +77,15 @@ class Adaline(object):
                 error = target - output
 
                 # Change this, check the func again
-                change_w = self.eta * error * xi
-                change_b = self.eta * error
+                change_w = eta * error * xi
+                change_b = eta * error
 
                 self.weights += change_w
                 self.bias += change_b
-                losses.append(self.calculate_loss(self.X, self.y)) 
+                losses.append(self.calculate_loss(X, y)) 
             
-            self.eta = 1 / (i+100)
-            self.losses_avg.append(losses.mean())
+            eta = 1 / (i+100)
+            self.losses_avg.append(sum(losses)/len(losses))
     
     def net_input(self, xi):
         return np.dot(xi, self.weights) + self.bias
