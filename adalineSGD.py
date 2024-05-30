@@ -12,9 +12,11 @@ rng = np.random.default_rng()
 # δw = -η * ∂L/∂w
 # δb = -η * ∂L/∂b
 
-# Add a partial fil method which does not reinitialize the weights
-# In order to check whether our algorithm converged after training, we will calculate the loss as the average loss of the training examples in each epoch.
+# Add a partial fit method which does not reinitialize the weights
+# calculate the loss as the average loss of the training examples in each epoch.
 # Add the option to reshuffle the data b4 each epoch 
+# SGD - Sochastic Gradient Descent
+# Difference between SGD and Perceptron is the loss function. We are using the loss function to compute the change for weights.
  
 
 class Adaline(object):
@@ -24,32 +26,70 @@ class Adaline(object):
         self.eta = 0.01 
         #self.weights = np.zeros(units) Boundary wont change bcz the weights are all 0
         self.bias = np.float64(0.)
+        self.losses_avg = []
         self.X = x
         self.y = y
-        self.losses = []
         self.weights = rng.normal(loc=0.0, scale=0.01, size=x.shape[1])
         
-    def fit(self, epochs):
+    def fit(self, epochs, reshuffle = False):
+        for i in range(epochs):
+            losses = []
+            
+            # Adaptive learning rate, using, new_eta = c1 / [# of iterations] + c2, c1 and c2 are constants.
+            self.eta = 1 / (i+100)
+            
+            if reshuffle:
+                concat_data = np.column_stack((self.X, self.y))
+                np.random.shuffle(concat_data)
+                self.X = concat_data[:, 0:2]
+                self.y = concat_data[:, 2]
+            
+            for xi, target in zip(self.X, self.y):
+                # Got the outputs for all xi
+                output = self.net_input(xi)
+                error = target - output
 
-        for _ in range(epochs):
-            # Got the outputs for all xi
-            output = self.net_input(self.X)
-            errors = self.y - output
-            
-            change_w = self.eta * 2 * (self.X.T.dot(errors) / len(self.X))
-            change_b = self.eta * 2 * errors.mean()
-            
-            self.weights += change_w
-            self.bias += change_b
-            self.losses.append(self.calculate_loss(self.X, self.y)) 
+                # Change this, check the func again
+                change_w = self.eta * error * xi
+                change_b = self.eta * error
+
+                self.weights += change_w
+                self.bias += change_b
+                losses.append(self.calculate_loss(self.X, self.y)) 
+            self.losses_avg.append(sum(losses)/len(losses))
 
         return self
     
-    def net_input(self, X):
-        outputs = []
-        for xi in X:
-            outputs.append(np.dot(xi, self.weights) + self.bias)
-        return outputs
+    def partial_fit(self, X, y, epochs, reshuffle):
+        for i in range(epochs):
+            losses = []
+            
+            eta = 0.01
+            
+            if reshuffle:
+                concat_data = pd.concat(X, y)
+                np.random.shuffle(concat_data)
+                self.X = concat_data[0:2]
+                self.y = concat_data[2]
+            
+            for xi, target in zip(X, y):
+                # Got the outputs for all xi
+                output = self.net_input(xi)
+                error = target - output
+
+                # Change this, check the func again
+                change_w = self.eta * error * xi
+                change_b = self.eta * error
+
+                self.weights += change_w
+                self.bias += change_b
+                losses.append(self.calculate_loss(self.X, self.y)) 
+            
+            self.eta = 1 / (i+100)
+            self.losses_avg.append(losses.mean())
+    
+    def net_input(self, xi):
+        return np.dot(xi, self.weights) + self.bias
     
     def calculate_loss(self, x, y):
         output = self.net_input(x)
